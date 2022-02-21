@@ -8,8 +8,9 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from autocorrect import Speller
 
-from sklearn.feature_extraction.text import CountVectorizer
 
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 '''
 How to install nltk
@@ -89,6 +90,19 @@ def process_doc(title, snippet):
     snippet = snippet.lower()
     return title, snippet
 
+def create_vector_matrix(corpus):
+    vectorizer = CountVectorizer()
+    bag = vectorizer.fit_transform(corpus)
+    np.set_printoptions(threshold=np.inf)
+
+    ''' print statements to check work '''
+    # print(corpus_of_titles_and_snippets_by_document)
+    #print(vectorizer.get_feature_names_out())  # print tokens across all documents
+    #print(vectorizer.vocabulary_)  # index of each unique word
+    #print(bag.toarray())
+    return vectorizer.vocabulary_, bag.toarray()
+
+
 def main():
     #step 1: receive command line inputs (list of words + target precision value)
     api_key = sys.argv[1]
@@ -118,12 +132,12 @@ def main():
                                                         'processed_snippet': processed_snippet}
             search_result_count += 1
 
-        #print statements to check work
+        '''print statements to check work'''
         #search_results_dict[count]["bow"] = {}
         #print(search_results_dict)
         #print(search_results_dict[1]['title'])
 
-        # create multiple corpus and then choose one to vectorize
+        # create multiple corpus
         corpus_of_titles_and_snippets_by_document = []
         corpus_of_titles_by_document = []
         corpus_of_snippets_by_document = []
@@ -132,14 +146,11 @@ def main():
             corpus_of_titles_and_snippets_by_document.append(concated_processed_documents_snippet_and_title)
             corpus_of_titles_by_document.append(search_results_dict[key]["processed_title"])
             corpus_of_snippets_by_document.append(search_results_dict[key]["processed_snippet"])
-        vectorizer = CountVectorizer()
-        X = vectorizer.fit_transform(corpus_of_titles_and_snippets_by_document) #to use just titles or just snippits, change the input to this function
-        np.set_printoptions(threshold=np.inf)
 
-        # print statements to check work 
-        # print(corpus_of_titles_and_snippets_by_document)
-        print(vectorizer.get_feature_names_out())
-        print(X.toarray())
+        #choose which corpus to vectorize and create a matrix of counts of unique word tokens (columns) by documents (rows)
+        token_index, bag_of_words = create_vector_matrix(corpus_of_titles_and_snippets_by_document) #to use just titles or just snippits, change the input of this function
+        print(token_index, bag_of_words)
+
 
         #step 3 loop through dictionary of search results. Print each result then get relevance evaluation from user.
         result_count = 1
@@ -157,7 +168,7 @@ def main():
             result_count += 1
 
 '''
-the following code worked to tokenize but I found a better way 
+the following code worked to tokenize but I found a better way so archiving this code 
     #tokenize 
     title_tokenized, snippet_tokenized = token(title, snippet)
     doc_tokenized = title_tokenized + snippet_tokenized
@@ -168,19 +179,6 @@ the following code worked to tokenize but I found a better way
     print(X)
 '''
 
-'''
-        vectorizer = CountVectorizer()
-        bag = vectorizer.fit_transform(dict)
-        # Get unique words / tokens found in all the documents. The unique words / tokens represents
-        # the features
-        print(vectorizer.get_feature_names())
-        #
-        # Associate the indices with each unique word
-        print(vectorizer.vocabulary_)
-        #
-        # Print the numerical feature vector
-        print(bag.toarray())
-'''
 
 
 main()
