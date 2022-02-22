@@ -1,5 +1,5 @@
 from googleapiclient.discovery import build
-import pprint
+import pprint as pp
 import sys
 import json
 import numpy as np
@@ -109,6 +109,40 @@ def create_vector_matrix(corpus):
     return vectorizer.vocabulary_, bag.toarray()
 
 
+def create_corpus(search_results_dict):
+    corpus_of_titles_and_snippets_by_document = []
+    corpus_of_titles_by_document = []
+    corpus_of_snippets_by_document = []
+    for key in search_results_dict.keys():
+        concated_processed_documents_snippet_and_title = search_results_dict[key]["processed_title"] + \
+                                                         search_results_dict[key]["processed_snippet"]
+        corpus_of_titles_and_snippets_by_document.append(concated_processed_documents_snippet_and_title)
+        corpus_of_titles_by_document.append(search_results_dict[key]["processed_title"])
+        corpus_of_snippets_by_document.append(search_results_dict[key]["processed_snippet"])
+    return corpus_of_titles_and_snippets_by_document, corpus_of_titles_by_document, corpus_of_snippets_by_document
+
+
+# save bag of words by document to search_results_dict; sum up all bags of words into an aggregated bag of words
+def bag_of_words_that_aggregates_all_search_results(search_results_dict, token_index, bag_of_words_by_document):
+    bag_of_words_all_search_results_summed = []
+    for key in search_results_dict.keys():
+        # save bag of words by document to search_results_dict
+        search_results_dict[key]["bag_of_words_by_document"] = {}
+        search_results_dict[key]["bag_of_words_by_document"] = bag_of_words_by_document[key - 1]
+        if key == 1:
+            bag_of_words_all_search_results_summed = (bag_of_words_by_document[key - 1])
+        else:
+            bag_of_words_all_search_results_summed = np.add(bag_of_words_by_document[key - 1],
+                                                            bag_of_words_all_search_results_summed)
+    # combine aggregated bag of words with token index
+    token_corpus_debug_checker = {}
+    for tkn, tkn_idx in token_index.items():
+        token_corpus_debug_checker[tkn] = {'bag_of_words_token_index': tkn_idx,
+                                           'corpus_word_count': bag_of_words_all_search_results_summed[tkn_idx]}
+
+    return search_results_dict, bag_of_words_all_search_results_summed, token_corpus_debug_checker
+
+
 def main():
     # step 1: receive command line inputs (list of words + target precision value)
     api_key = sys.argv[1]
@@ -141,49 +175,48 @@ def main():
 
         '''print statements to check work'''
         # print(search_results_dict[1]['title'])
+        ''''''''''''''''''''''''''''''''''''
 
         # create multiple corpus
-        corpus_of_titles_and_snippets_by_document = []
-        corpus_of_titles_by_document = []
-        corpus_of_snippets_by_document = []
-        for key in search_results_dict.keys():
-            concated_processed_documents_snippet_and_title = search_results_dict[key]["processed_title"] + \
-                                                             search_results_dict[key]["processed_snippet"]
-            corpus_of_titles_and_snippets_by_document.append(concated_processed_documents_snippet_and_title)
-            corpus_of_titles_by_document.append(search_results_dict[key]["processed_title"])
-            corpus_of_snippets_by_document.append(search_results_dict[key]["processed_snippet"])
+        corpus_of_titles_and_snippets_by_document, corpus_of_titles_by_document, corpus_of_snippets_by_document = create_corpus(
+            search_results_dict)
 
-        # choose which corpus to vectorize and create a matrix of counts of unique word tokens (columns) by documents (rows)
+        # choose which corpus to vectorize and create a bag of words matrix of counts of unique word tokens (columns) by documents (rows)
         token_index, bag_of_words_by_document = create_vector_matrix(
             corpus_of_titles_and_snippets_by_document)  # to use just titles or just snippits, change the input of this function
         token_index = {k: v for k, v in
                        sorted(token_index.items(), key=lambda item: item[1])}  # sorts token_index by index
 
+        # save bag of words by document to search_results_dict; sum up all bags of words
+        search_results_dict, bag_of_words_all_search_results_aggregated, token_corpus_debug_checker = bag_of_words_that_aggregates_all_search_results(
+            search_results_dict, token_index, bag_of_words_by_document)
+        # bag_of_words_all_search_results_summed = []
+        # for key in search_results_dict.keys():
+        #     search_results_dict[key]["bag_of_words_by_document"] = {}
+        #     search_results_dict[key]["bag_of_words_by_document"] = bag_of_words_by_document[key-1]
+        #     if key == 1:
+        #         bag_of_words_all_search_results_summed = (bag_of_words_by_document[key - 1])
+        #     else:
+        #         bag_of_words_all_search_results_summed = np.add(bag_of_words_by_document[key-1], bag_of_words_all_search_results_summed)
+        #
+        # token_corpus_debug_checker = {}
+        # for tkn, tkn_idx in token_index.items():
+        #     token_corpus_debug_checker[tkn] = {'bag_of_words_token_index': tkn_idx, 'corpus_word_count': bag_of_words_all_search_results_summed[tkn_idx]}
+
         '''print statements to check work'''
-        print(bag_of_words_by_document)
+        pp.pprint(bag_of_words_by_document)  # "bags of words by document: ",
+        pp.pprint(
+            bag_of_words_all_search_results_aggregated)  # "bags of words for all search result documents aggregated: ",
+        pp.pprint(
+            token_corpus_debug_checker)  # "bags of words for all search result documents aggregated with tokens: ",
         ''''''''''''''''''''''''''''''''''''
 
-        # save bag of words by document to search_results_dict
-        bag_of_words_all_search_results_summed = []
-        search_results_dict[key]["bag_of_words_by_document"] = {}
-        for key in search_results_dict.keys():
-            search_results_dict[key]["bag_of_words_by_document"] = bag_of_words_by_document[key - 1]
-            if key == 1:
-                bag_of_words_all_search_results_summed = (bag_of_words_by_document[key - 1])
-            else:
-                bag_of_words_all_search_results_summed = np.add(bag_of_words_by_document[key - 1],
-                                                                bag_of_words_all_search_results_summed)
-
-        '''print statements to check work'''
-        print(search_results_dict)
-        print("sum of all bags of words: ", token_index, bag_of_words_all_search_results_summed)
-        ''''''''''''''''''''''''''''''''''''
-
-        # step 3 loop through dictionary of search results. Print each result then get relevance evaluation from user.
+        # step 3 loop through dictionary of search results. Print each result to user then get relevance evaluation from user.
         result_count = 1
         yes_counter = 0
-        search_results_dict[key]["is_relevant"] = {}
+
         for key in search_results_dict.keys():
+            search_results_dict[key]["is_relevant"] = {}
             # step 3, part 1: print
             print_result(result_count, search_results_dict[key]["processed_title"], search_results_dict[key]["url"],
                          search_results_dict[key]["processed_snippet"])
@@ -192,12 +225,12 @@ def main():
             is_relevant = relevant()
             yes_counter = yes_counter + is_relevant
 
-            # store result in search_results_dict
+            # step 3, part 3: store result in search_results_dict
             search_results_dict[key]["is_relevant"] = is_relevant
             result_count += 1
 
             '''print statements to check work'''
-            print(search_results_dict)
+            pp.pprint(search_results_dict[key])
             ''''''''''''''''''''''''''''''''''''
 
 
