@@ -8,10 +8,10 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from autocorrect import Speller
 
-
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+
 '''
 How to install nltk
 follow these instructions: https://www.nltk.org/install.html 
@@ -20,27 +20,26 @@ import nltkimport
 nltk.download()
 nltk.download('punkt')
 
-
 then these instructions to install punkt https://github.com/gunthercox/ChatterBot/issues/930#issuecomment-322111087
 crl d to get back to regular terminal 
-
 
 pip install autocorrect
 pip install -U scikit-learn
 '''
 
 
-
 def get_search_results(query, api_key, engine_id):
-    #call api with query and return result
+    # call api with query and return result
     service = build("customsearch", "v1", developerKey=api_key)
-    res = service.cse().list(q=query,cx=engine_id,).execute()
+    res = service.cse().list(q=query, cx=engine_id, ).execute()
     return res
+
 
 def unwrap_json(search_results):
     top_10_results_json_dump = search_results['items']
-    #print("top_10_results", top_10_results_json_dump)
+    # print("top_10_results", top_10_results_json_dump)
     return top_10_results_json_dump
+
 
 def relevant():
     relevant = input("Relevant (Y/N)?").upper()
@@ -63,12 +62,14 @@ def print_search_params(api_key, engine_key, query, precision):
     print("Google Search Results:")
     print("=====================")
 
+
 def unwrap_each_result(result_dict):
     curr_result = result_dict
     curr_title = curr_result['title']
     curr_url = curr_result['formattedUrl']
     curr_snippet = curr_result['snippet']
     return curr_title, curr_url, curr_snippet
+
 
 def print_result(result_count, curr_title, curr_url, curr_snippet):
     print("Result ", result_count)
@@ -79,16 +80,19 @@ def print_result(result_count, curr_title, curr_url, curr_snippet):
     print("]")
     print()
 
+
 def token(title, snippet):
     title_tokenized = word_tokenize(title)
     snippet_tokenized = word_tokenize(snippet)
     return title_tokenized, snippet_tokenized
+
 
 def process_doc(title, snippet):
     # make words lower case
     title = title.lower()
     snippet = snippet.lower()
     return title, snippet
+
 
 def create_vector_matrix(corpus):
     vectorizer = CountVectorizer()
@@ -97,14 +101,16 @@ def create_vector_matrix(corpus):
 
     ''' print statements to check work '''
     # print(corpus_of_titles_and_snippets_by_document)
-    #print(vectorizer.get_feature_names_out())  # print tokens across all documents
-    #print(vectorizer.vocabulary_)  # index of each unique word
-    #print(bag.toarray())
+    # print(vectorizer.get_feature_names_out())  # print tokens across all documents
+    # print(vectorizer.vocabulary_)  # index of each unique word
+    # print(bag.toarray())
+    ''''''''''''''''''''''''''''''''''''
+
     return vectorizer.vocabulary_, bag.toarray()
 
 
 def main():
-    #step 1: receive command line inputs (list of words + target precision value)
+    # step 1: receive command line inputs (list of words + target precision value)
     api_key = sys.argv[1]
     engine_key = sys.argv[2]
     precision = float(sys.argv[3])
@@ -114,10 +120,10 @@ def main():
     # step 2: call api w ip=query, collect  top-10 results to user
     curr_precision = 0.0
     while curr_precision < precision:
-        #get search results
+        # get search results
         search_results = get_search_results(query, api_key, engine_key)
 
-        #unwrap search results json
+        # unwrap search results json
         json_dump_of_search_results = unwrap_json(search_results)
 
         # loop through each search result
@@ -128,44 +134,72 @@ def main():
         for each_result in json_dump_of_search_results:
             title, url, snippet = unwrap_each_result(each_result)
             processed_title, processed_snippet = process_doc(title, snippet)
-            search_results_dict[search_result_count] = {'title': title, "url": url, "snippet": snippet, 'processed_title': processed_title,
+            search_results_dict[search_result_count] = {'title': title, "url": url, "snippet": snippet,
+                                                        'processed_title': processed_title,
                                                         'processed_snippet': processed_snippet}
             search_result_count += 1
 
         '''print statements to check work'''
-        #search_results_dict[count]["bow"] = {}
-        #print(search_results_dict)
-        #print(search_results_dict[1]['title'])
+        # print(search_results_dict[1]['title'])
 
         # create multiple corpus
         corpus_of_titles_and_snippets_by_document = []
         corpus_of_titles_by_document = []
         corpus_of_snippets_by_document = []
         for key in search_results_dict.keys():
-            concated_processed_documents_snippet_and_title = search_results_dict[key]["processed_title"] + search_results_dict[key]["processed_snippet"]
+            concated_processed_documents_snippet_and_title = search_results_dict[key]["processed_title"] + \
+                                                             search_results_dict[key]["processed_snippet"]
             corpus_of_titles_and_snippets_by_document.append(concated_processed_documents_snippet_and_title)
             corpus_of_titles_by_document.append(search_results_dict[key]["processed_title"])
             corpus_of_snippets_by_document.append(search_results_dict[key]["processed_snippet"])
 
-        #choose which corpus to vectorize and create a matrix of counts of unique word tokens (columns) by documents (rows)
-        token_index, bag_of_words = create_vector_matrix(corpus_of_titles_and_snippets_by_document) #to use just titles or just snippits, change the input of this function
-        print(token_index, bag_of_words)
+        # choose which corpus to vectorize and create a matrix of counts of unique word tokens (columns) by documents (rows)
+        token_index, bag_of_words_by_document = create_vector_matrix(
+            corpus_of_titles_and_snippets_by_document)  # to use just titles or just snippits, change the input of this function
+        token_index = {k: v for k, v in
+                       sorted(token_index.items(), key=lambda item: item[1])}  # sorts token_index by index
 
+        '''print statements to check work'''
+        print(bag_of_words_by_document)
+        ''''''''''''''''''''''''''''''''''''
 
-        #step 3 loop through dictionary of search results. Print each result then get relevance evaluation from user.
+        # save bag of words by document to search_results_dict
+        bag_of_words_all_search_results_summed = []
+        search_results_dict[key]["bag_of_words_by_document"] = {}
+        for key in search_results_dict.keys():
+            search_results_dict[key]["bag_of_words_by_document"] = bag_of_words_by_document[key - 1]
+            if key == 1:
+                bag_of_words_all_search_results_summed = (bag_of_words_by_document[key - 1])
+            else:
+                bag_of_words_all_search_results_summed = np.add(bag_of_words_by_document[key - 1],
+                                                                bag_of_words_all_search_results_summed)
+
+        '''print statements to check work'''
+        print(search_results_dict)
+        print("sum of all bags of words: ", token_index, bag_of_words_all_search_results_summed)
+        ''''''''''''''''''''''''''''''''''''
+
+        # step 3 loop through dictionary of search results. Print each result then get relevance evaluation from user.
         result_count = 1
         yes_counter = 0
+        search_results_dict[key]["is_relevant"] = {}
         for key in search_results_dict.keys():
-            #step 3, part 1: print
-            print_result(result_count, search_results_dict[key]["processed_title"], search_results_dict[key]["url"], search_results_dict[key]["processed_snippet"])
+            # step 3, part 1: print
+            print_result(result_count, search_results_dict[key]["processed_title"], search_results_dict[key]["url"],
+                         search_results_dict[key]["processed_snippet"])
 
             ##step 3, part 2: Ask user if relevant, increment yes counter and add new key-value pair
             is_relevant = relevant()
             yes_counter = yes_counter + is_relevant
-            each_result["is_relevant"] = is_relevant
 
-            # store result
+            # store result in search_results_dict
+            search_results_dict[key]["is_relevant"] = is_relevant
             result_count += 1
+
+            '''print statements to check work'''
+            print(search_results_dict)
+            ''''''''''''''''''''''''''''''''''''
+
 
 '''
 the following code worked to tokenize but I found a better way so archiving this code 
@@ -178,7 +212,5 @@ the following code worked to tokenize but I found a better way so archiving this
     X = matrix.fit_transform(text).toarray()
     print(X)
 '''
-
-
 
 main()
