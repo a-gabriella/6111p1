@@ -209,14 +209,59 @@ def main():
             ##step 3, part 2: Ask user if relevant, increment yes counter and add new key-value pair
             is_relevant = relevant()
             yes_counter = yes_counter + is_relevant
-
+            
             # step 3, part 3: store result in search_results_dict
             search_results_dict[key]["is_relevant"] = is_relevant
             result_count += 1
-
+            
             '''print statements to check work'''
             pp.pprint(search_results_dict[key])
             ''''''''''''''''''''''''''''''''''''
+
+        curr_precision = yes_counter/result_count
+
+        if curr_precision:
+            for key in search_results_dict.keys():
+                relevant_bow = []
+                relevant_docs=0
+                non_relevant_bow = []
+                non_relevant_docs=0
+                if search_results_dict[key]["is_relevant"]:
+                    #add bow columnwise to relevant_bow
+                    print("doc {} is relevant".format(key))
+                    print(search_results_dict[key]['bag_of_words_by_document'])
+                    if relevant_docs == 0:
+                        relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
+                    else:
+                        relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], relevant_bow)
+                    relevant_docs += 1
+                else:
+                    print("doc {} is not relevant".format(key))
+                    print(search_results_dict[key]['bag_of_words_by_document'])
+                    #add bow columnwise to non_relevant_bow
+                    if non_relevant_docs == 0:
+                        non_relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
+                    else:
+                        non_relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], non_relevant_bow)
+                    non_relevant_bow +=1 
+
+            print("finding avg")
+            relevant_bow = np.divide(relevant_bow, relevant_docs)
+            non_relevant_bow = np.divide(non_relevant_bow, non_relevant_docs)
+
+            
+
+            #relevant_bow-non_relevant columnwise
+            #remove query from abv vector
+            #find max cols and map to words
+
+        #step 4: Rocchio's
+        #4.1: tokenize query to vector
+        #4.2: sum bag_of_words for relevant docs and non_relevant docs separately
+        #4.3: divide both sums by # of relevant and non_relevant docs respectively
+        #4.3: relevant-non_relevant
+        #4.4: remove query from 4.3
+        #4.5: find 2 cols with highest value and append those words to new query
 
 
 '''
