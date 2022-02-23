@@ -220,50 +220,73 @@ def main():
 
         curr_precision = yes_counter/result_count
 
-        if curr_precision:
-            for key in search_results_dict.keys():
-                relevant_bow = []
-                relevant_docs=0
-                non_relevant_bow = []
-                non_relevant_docs=0
+        if curr_precision > precision:
+            print("Success! Current precision greater than required precision")
+            sys.exit()
+
+        elif curr_precision == 0:
+            print("current precsion is 0, terminating")
+            sys.exit()
+
+        else:
+                #step 4: Rocchio's
+                #4.1: tokenize query to vector
+                #4.2: sum bag_of_words for relevant docs and non_relevant docs separately
+                #4.3: divide both sums by # of relevant and non_relevant docs respectively
+                #4.3: relevant-non_relevant
+                #4.4: remove query from 4.3
+                #4.5: find 2 cols with highest value and append those words to new query
+
+            relevant_bow = []
+            relevant_docs_ctr=0
+            non_relevant_bow = []
+            non_relevant_docs_ctr=0
+            for key in search_results_dict.keys():                
                 if search_results_dict[key]["is_relevant"]:
                     #add bow columnwise to relevant_bow
                     print("doc {} is relevant".format(key))
-                    print(search_results_dict[key]['bag_of_words_by_document'])
-                    if relevant_docs == 0:
+                    print(relevant_bow)
+                    if relevant_docs_ctr == 0:
                         relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
                     else:
                         relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], relevant_bow)
-                    relevant_docs += 1
+                    relevant_docs_ctr += 1
                 else:
                     print("doc {} is not relevant".format(key))
-                    print(search_results_dict[key]['bag_of_words_by_document'])
+                    print(non_relevant_bow)
                     #add bow columnwise to non_relevant_bow
-                    if non_relevant_docs == 0:
+                    if non_relevant_docs_ctr == 0:
                         non_relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
                     else:
                         non_relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], non_relevant_bow)
-                    non_relevant_bow +=1 
+                    non_relevant_docs_ctr +=1 
 
             print("finding avg")
-            relevant_bow = np.divide(relevant_bow, relevant_docs)
-            non_relevant_bow = np.divide(non_relevant_bow, non_relevant_docs)
+            relevant_bow = np.divide(relevant_bow, relevant_docs_ctr)
+            non_relevant_bow = np.divide(non_relevant_bow, non_relevant_docs_ctr)
+            print(relevant_bow, relevant_docs_ctr)
+            print(non_relevant_bow ,non_relevant_docs_ctr)
 
-            
+            print("relevant - non_relevant")
+            only_relevant_bow = np.subtract(relevant_bow, non_relevant_bow)
+            print(only_relevant_bow)
 
-            #relevant_bow-non_relevant columnwise
-            #remove query from abv vector
-            #find max cols and map to words
+            #TODO: remove query from only_relevant_bow vector
 
-        #step 4: Rocchio's
-        #4.1: tokenize query to vector
-        #4.2: sum bag_of_words for relevant docs and non_relevant docs separately
-        #4.3: divide both sums by # of relevant and non_relevant docs respectively
-        #4.3: relevant-non_relevant
-        #4.4: remove query from 4.3
-        #4.5: find 2 cols with highest value and append those words to new query
+            #find 2 max cols and map to words            
+            indices = (-only_relevant_bow).argsort()[:2]
+            word1 = list(token_index.keys())[list(token_index.values()).index(indices[0])]
+            word2 = list(token_index.keys())[list(token_index.values()).index(indices[1])]
 
+            #print statements
+            # print(indices)
+            # print(token_index)
+            # print(word1, word2)
 
+            new_query = query + " " + word1 + " " + word2
+            query = new_query
+            print(query)
+       
 '''
 the following code worked to tokenize but I found a better way so archiving this code 
     #tokenize 
