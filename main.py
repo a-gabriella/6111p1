@@ -188,12 +188,12 @@ def main():
             bag_of_words_that_aggregates_all_search_results(search_results_dict, token_index, bag_of_words_by_document)
 
         '''print statements to check work'''
-        pp.pprint(bag_of_words_by_document)  # "bags of words by document: ",
-        pp.pprint(
-            bag_of_words_all_search_results_aggregated)  # "bags of words for all search result documents aggregated: ",
-        pp.pprint(
-            token_corpus_debug_checker)  # "bags of words for all search result documents aggregated with tokens: ",
-        # print(search_results_dict[1]['title'])
+        # pp.pprint(bag_of_words_by_document)  # "bags of words by document: ",
+        # pp.pprint(
+        #     bag_of_words_all_search_results_aggregated)  # "bags of words for all search result documents aggregated: ",
+        # pp.pprint(
+        #     token_corpus_debug_checker)  # "bags of words for all search result documents aggregated with tokens: ",
+        # # print(search_results_dict[1]['title'])
         ''''''''''''''''''''''''''''''''''''
 
         # step 3 loop through dictionary of search results. Print each result to user then get relevance evaluation from user.
@@ -230,5 +230,4 @@ the following code worked to tokenize but I found a better way so archiving this
     X = matrix.fit_transform(text).toarray()
     print(X)
 '''
-
 main()
