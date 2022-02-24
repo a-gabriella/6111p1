@@ -143,6 +143,57 @@ def bag_of_words_that_aggregates_all_search_results(search_results_dict, token_i
 
     return search_results_dict, bag_of_words_all_search_results_summed, token_corpus_debug_checker
 
+def rocchios(search_results_dict, token_index, query):
+    relevant_bow = []
+    relevant_docs_ctr=0
+    non_relevant_bow = []
+    non_relevant_docs_ctr=0
+    for key in search_results_dict.keys():                
+        if search_results_dict[key]["is_relevant"]:
+            #add bow columnwise to relevant_bow
+            print("doc {} is relevant".format(key))
+            print(relevant_bow)
+            if relevant_docs_ctr == 0:
+                relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
+            else:
+                relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], relevant_bow)
+            relevant_docs_ctr += 1
+        else:
+            print("doc {} is not relevant".format(key))
+            print(non_relevant_bow)
+            #add bow columnwise to non_relevant_bow
+            if non_relevant_docs_ctr == 0:
+                non_relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
+            else:
+                non_relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], non_relevant_bow)
+            non_relevant_docs_ctr +=1 
+
+    print("finding avg")
+    relevant_bow = np.divide(relevant_bow, relevant_docs_ctr)
+    non_relevant_bow = np.divide(non_relevant_bow, non_relevant_docs_ctr)
+    print(relevant_bow, relevant_docs_ctr)
+    print(non_relevant_bow ,non_relevant_docs_ctr)
+
+    print("relevant - non_relevant")
+    only_relevant_bow = np.subtract(relevant_bow, non_relevant_bow)
+    print(only_relevant_bow)
+
+    #tokenize query
+    query = query.lower()
+    tokenized_query = query.split()
+
+    #remove query from only_relevant_bow vector
+    for query_word in tokenized_query:
+        #find col # of query_word
+        col_no= token_index[query_word]
+        only_relevant_bow[col_no] = -math.inf              
+
+    #find 2 max cols and map to words            
+    indices = (-only_relevant_bow).argsort()[:2]
+    word1 = list(token_index.keys())[list(token_index.values()).index(indices[0])]
+    word2 = list(token_index.keys())[list(token_index.values()).index(indices[1])]
+    return word1, word2
+        
 
 def main():
     # step 1: receive command line inputs (list of words + target precision value)
@@ -230,67 +281,7 @@ def main():
             sys.exit()
 
         else:
-                #step 4: Rocchio's
-                #4.1: tokenize query to vector
-                #4.2: sum bag_of_words for relevant docs and non_relevant docs separately
-                #4.3: divide both sums by # of relevant and non_relevant docs respectively
-                #4.3: relevant-non_relevant
-                #4.4: remove query from 4.3
-                #4.5: find 2 cols with highest value and append those words to new query
-
-            relevant_bow = []
-            relevant_docs_ctr=0
-            non_relevant_bow = []
-            non_relevant_docs_ctr=0
-            for key in search_results_dict.keys():                
-                if search_results_dict[key]["is_relevant"]:
-                    #add bow columnwise to relevant_bow
-                    print("doc {} is relevant".format(key))
-                    print(relevant_bow)
-                    if relevant_docs_ctr == 0:
-                        relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
-                    else:
-                        relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], relevant_bow)
-                    relevant_docs_ctr += 1
-                else:
-                    print("doc {} is not relevant".format(key))
-                    print(non_relevant_bow)
-                    #add bow columnwise to non_relevant_bow
-                    if non_relevant_docs_ctr == 0:
-                        non_relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
-                    else:
-                        non_relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], non_relevant_bow)
-                    non_relevant_docs_ctr +=1 
-
-            print("finding avg")
-            relevant_bow = np.divide(relevant_bow, relevant_docs_ctr)
-            non_relevant_bow = np.divide(non_relevant_bow, non_relevant_docs_ctr)
-            print(relevant_bow, relevant_docs_ctr)
-            print(non_relevant_bow ,non_relevant_docs_ctr)
-
-            print("relevant - non_relevant")
-            only_relevant_bow = np.subtract(relevant_bow, non_relevant_bow)
-            print(only_relevant_bow)
-
-            #tokenize query
-            query = query.lower()
-            tokenized_query = query.split()
-
-            #remove query from only_relevant_bow vector
-            for query_word in tokenized_query:
-                #find col # of query_word
-                col_no= token_index[query_word]
-                only_relevant_bow[col_no] = -math.inf              
-
-            #find 2 max cols and map to words            
-            indices = (-only_relevant_bow).argsort()[:2]
-            word1 = list(token_index.keys())[list(token_index.values()).index(indices[0])]
-            word2 = list(token_index.keys())[list(token_index.values()).index(indices[1])]
-
-            #print statements
-            # print(indices)
-            # print(token_index)
-            # print(word1, word2)
+            word1, word2 = rocchios(search_results_dict, token_index, query)
 
             #TODO: add ordering here
             new_query = query + " " + word1 + " " + word2
