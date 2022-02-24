@@ -151,16 +151,16 @@ def rocchios(search_results_dict, token_index, query):
     for key in search_results_dict.keys():                
         if search_results_dict[key]["is_relevant"]:
             #add bow columnwise to relevant_bow
-            print("doc {} is relevant".format(key))
-            print(relevant_bow)
+            # print("doc {} is relevant".format(key))
+            # print(relevant_bow)
             if relevant_docs_ctr == 0:
                 relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
             else:
                 relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], relevant_bow)
             relevant_docs_ctr += 1
         else:
-            print("doc {} is not relevant".format(key))
-            print(non_relevant_bow)
+            # print("doc {} is not relevant".format(key))
+            # print(non_relevant_bow)
             #add bow columnwise to non_relevant_bow
             if non_relevant_docs_ctr == 0:
                 non_relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
@@ -168,15 +168,15 @@ def rocchios(search_results_dict, token_index, query):
                 non_relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], non_relevant_bow)
             non_relevant_docs_ctr +=1 
 
-    print("finding avg")
+    #print("finding avg")
     relevant_bow = np.divide(relevant_bow, relevant_docs_ctr)
     non_relevant_bow = np.divide(non_relevant_bow, non_relevant_docs_ctr)
-    print(relevant_bow, relevant_docs_ctr)
-    print(non_relevant_bow ,non_relevant_docs_ctr)
+    # print(relevant_bow, relevant_docs_ctr)
+    # print(non_relevant_bow ,non_relevant_docs_ctr)
 
-    print("relevant - non_relevant")
+    #print("relevant - non_relevant")
     only_relevant_bow = np.subtract(relevant_bow, non_relevant_bow)
-    print(only_relevant_bow)
+    #print(only_relevant_bow)
 
     #tokenize query
     query = query.lower()
@@ -201,13 +201,18 @@ def main():
     engine_key = sys.argv[2]
     precision = float(sys.argv[3])
     query = sys.argv[4]
-    print_search_params(api_key, engine_key, query, precision)
 
     # step 2: call api w ip=query, collect  top-10 results to user
     curr_precision = 0.0
     while curr_precision < precision:
+        print_search_params(api_key, engine_key, query, precision)
+
         # get search results
         search_results = get_search_results(query, api_key, engine_key)
+        
+        if len(search_results) == 0 :
+            print("API returned no results")
+            sys.exit()
 
         # unwrap search results json
         json_dump_of_search_results = unwrap_json(search_results)
@@ -240,6 +245,7 @@ def main():
             bag_of_words_that_aggregates_all_search_results(search_results_dict, token_index, bag_of_words_by_document)
 
         '''print statements to check work'''
+
         # pp.pprint(bag_of_words_by_document)  # "bags of words by document: ",
         # pp.pprint(
         #     bag_of_words_all_search_results_aggregated)  # "bags of words for all search result documents aggregated: ",
@@ -267,26 +273,31 @@ def main():
             result_count += 1
             
             '''print statements to check work'''
-            pp.pprint(search_results_dict[key])
+            #pp.pprint(search_results_dict[key])
             ''''''''''''''''''''''''''''''''''''
 
         curr_precision = yes_counter/result_count
+        print("=============================")
+        print("FEEDBACK SUMMARY")
+        print("Query", query)
+        print("Precision", curr_precision)
 
-        if curr_precision > precision:
-            print("Success! Current precision greater than required precision")
+        if curr_precision == 0:
+            print("Precision = 0; terminating")
             sys.exit()
 
-        elif curr_precision == 0:
-            print("current precsion is 0, terminating")
+        if (curr_precision > precision):
+            print("Desired precision reached, done")
             sys.exit()
-
         else:
+            print("Still below the desired precision of ", precision)
             word1, word2 = rocchios(search_results_dict, token_index, query)
 
             #TODO: add ordering here
             new_query = query + " " + word1 + " " + word2
             query = new_query
-            print(query)
+            print("Augmented by ", word1, word2)
+
        
 '''
 the following code worked to tokenize but I found a better way so archiving this code 
