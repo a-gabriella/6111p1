@@ -2,6 +2,7 @@ from googleapiclient.discovery import build
 import pprint as pp
 import sys
 import json
+import math
 import numpy as np
 from nltk.tokenize import word_tokenize
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -142,6 +143,57 @@ def bag_of_words_that_aggregates_all_search_results(search_results_dict, token_i
 
     return search_results_dict, bag_of_words_all_search_results_summed, token_corpus_debug_checker
 
+def rocchios(search_results_dict, token_index, query):
+    relevant_bow = []
+    relevant_docs_ctr=0
+    non_relevant_bow = []
+    non_relevant_docs_ctr=0
+    for key in search_results_dict.keys():                
+        if search_results_dict[key]["is_relevant"]:
+            #add bow columnwise to relevant_bow
+            print("doc {} is relevant".format(key))
+            print(relevant_bow)
+            if relevant_docs_ctr == 0:
+                relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
+            else:
+                relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], relevant_bow)
+            relevant_docs_ctr += 1
+        else:
+            print("doc {} is not relevant".format(key))
+            print(non_relevant_bow)
+            #add bow columnwise to non_relevant_bow
+            if non_relevant_docs_ctr == 0:
+                non_relevant_bow = search_results_dict[key]["bag_of_words_by_document"]
+            else:
+                non_relevant_bow = np.add(search_results_dict[key]["bag_of_words_by_document"], non_relevant_bow)
+            non_relevant_docs_ctr +=1 
+
+    print("finding avg")
+    relevant_bow = np.divide(relevant_bow, relevant_docs_ctr)
+    non_relevant_bow = np.divide(non_relevant_bow, non_relevant_docs_ctr)
+    print(relevant_bow, relevant_docs_ctr)
+    print(non_relevant_bow ,non_relevant_docs_ctr)
+
+    print("relevant - non_relevant")
+    only_relevant_bow = np.subtract(relevant_bow, non_relevant_bow)
+    print(only_relevant_bow)
+
+    #tokenize query
+    query = query.lower()
+    tokenized_query = query.split()
+
+    #remove query from only_relevant_bow vector
+    for query_word in tokenized_query:
+        #find col # of query_word
+        col_no= token_index[query_word]
+        only_relevant_bow[col_no] = -math.inf              
+
+    #find 2 max cols and map to words            
+    indices = (-only_relevant_bow).argsort()[:2]
+    word1 = list(token_index.keys())[list(token_index.values()).index(indices[0])]
+    word2 = list(token_index.keys())[list(token_index.values()).index(indices[1])]
+    return word1, word2
+        
 
 def main():
     # step 1: receive command line inputs (list of words + target precision value)
@@ -188,12 +240,12 @@ def main():
             bag_of_words_that_aggregates_all_search_results(search_results_dict, token_index, bag_of_words_by_document)
 
         '''print statements to check work'''
-        pp.pprint(bag_of_words_by_document)  # "bags of words by document: ",
-        pp.pprint(
-            bag_of_words_all_search_results_aggregated)  # "bags of words for all search result documents aggregated: ",
-        pp.pprint(
-            token_corpus_debug_checker)  # "bags of words for all search result documents aggregated with tokens: ",
-        # print(search_results_dict[1]['title'])
+        # pp.pprint(bag_of_words_by_document)  # "bags of words by document: ",
+        # pp.pprint(
+        #     bag_of_words_all_search_results_aggregated)  # "bags of words for all search result documents aggregated: ",
+        # pp.pprint(
+        #     token_corpus_debug_checker)  # "bags of words for all search result documents aggregated with tokens: ",
+        # # print(search_results_dict[1]['title'])
         ''''''''''''''''''''''''''''''''''''
 
         # step 3 loop through dictionary of search results. Print each result to user then get relevance evaluation from user.
@@ -209,16 +261,33 @@ def main():
             ##step 3, part 2: Ask user if relevant, increment yes counter and add new key-value pair
             is_relevant = relevant()
             yes_counter = yes_counter + is_relevant
-
+            
             # step 3, part 3: store result in search_results_dict
             search_results_dict[key]["is_relevant"] = is_relevant
             result_count += 1
-
+            
             '''print statements to check work'''
             pp.pprint(search_results_dict[key])
             ''''''''''''''''''''''''''''''''''''
 
+        curr_precision = yes_counter/result_count
 
+        if curr_precision > precision:
+            print("Success! Current precision greater than required precision")
+            sys.exit()
+
+        elif curr_precision == 0:
+            print("current precsion is 0, terminating")
+            sys.exit()
+
+        else:
+            word1, word2 = rocchios(search_results_dict, token_index, query)
+
+            #TODO: add ordering here
+            new_query = query + " " + word1 + " " + word2
+            query = new_query
+            print(query)
+       
 '''
 the following code worked to tokenize but I found a better way so archiving this code 
     #tokenize 
@@ -230,5 +299,4 @@ the following code worked to tokenize but I found a better way so archiving this
     X = matrix.fit_transform(text).toarray()
     print(X)
 '''
-
 main()
