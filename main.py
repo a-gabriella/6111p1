@@ -4,9 +4,9 @@ import sys
 import json
 import math
 import numpy as np
-from nltk.tokenize import word_tokenize
-from nltk.tokenize import sent_tokenize, word_tokenize
-from nltk.corpus import stopwords
+#from nltk.tokenize import word_tokenize
+#from nltk.tokenize import sent_tokenize, word_tokenize
+#from nltk.corpus import stopwords
 from autocorrect import Speller
 
 from sklearn.feature_extraction.text import TfidfVectorizer
